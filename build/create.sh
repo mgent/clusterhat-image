@@ -31,31 +31,69 @@ VER=$1
 
 CNT=0
 
-# Check for stretch
+# Check for Raspbian stretch
 if [ -f "$SOURCE/$VER-raspbian-stretch-lite.img" ];then
- SOURCES[$CNT]="$VER-raspbian-stretch-lite.img|ClusterCTRL-$VER-lite-$REV|LITE|STRETCH"
+ SOURCES[$CNT]="$VER-raspbian-stretch-lite.img|$VER-$REV-ClusterCTRL-armhf-lite|LITE|STRETCH"
  let CNT=$CNT+1
 fi
 if [ -f "$SOURCE/$VER-raspbian-stretch.img" ];then
- SOURCES[$CNT]="$VER-raspbian-stretch.img|ClusterCTRL-$VER-std-$REV|STD|STRETCH"
+ SOURCES[$CNT]="$VER-raspbian-stretch.img|$VER-$REV-ClusterCTRL-armhf|STD|STRETCH"
  let CNT=$CNT+1
 fi
 if [ -f "$SOURCE/$VER-raspbian-stretch-full.img" ];then
- SOURCES[$CNT]="$VER-raspbian-stretch-full.img|ClusterCTRL-$VER-full-$REV|FULL|STRETCH"
+ SOURCES[$CNT]="$VER-raspbian-stretch-full.img|$VER-$REV-ClusterCTRL-armhf-full|FULL|STRETCH"
  let CNT=$CNT+1
 fi
 
-# Check for buster
+# Check for Raspbian buster
 if [ -f "$SOURCE/$VER-raspbian-buster-lite.img" ];then
- SOURCES[$CNT]="$VER-raspbian-buster-lite.img|ClusterCTRL-$VER-lite-$REV|LITE|BUSTER"
+ SOURCES[$CNT]="$VER-raspbian-buster-lite.img|$VER-$REV-ClusterCTRL-armhf-lite|LITE|BUSTER"
  let CNT=$CNT+1
 fi
 if [ -f "$SOURCE/$VER-raspbian-buster.img" ];then
- SOURCES[$CNT]="$VER-raspbian-buster.img|ClusterCTRL-$VER-std-$REV|STD|BUSTER"
+ SOURCES[$CNT]="$VER-raspbian-buster.img|$VER-$REV-ClusterCTRL-armhf-std|STD|BUSTER"
  let CNT=$CNT+1
 fi
 if [ -f "$SOURCE/$VER-raspbian-buster-full.img" ];then
- SOURCES[$CNT]="$VER-raspbian-buster-full.img|ClusterCTRL-$VER-full-$REV|FULL|BUSTER"
+ SOURCES[$CNT]="$VER-raspbian-buster-full.img|$VER-$REV-ClusterCTRL-armhf-full|FULL|BUSTER"
+ let CNT=$CNT+1
+fi
+
+# Check for Raspberry Pi OS (old naming scheme)
+if [ -f "$SOURCE/$VER-raspios-buster-lite-armhf.img" ];then
+ SOURCES[$CNT]="$VER-raspios-buster-lite-armhf.img|$VER-$REV-ClusterCTRL-armhf-lite|LITE|RASPIOS32BUSTER"
+ let CNT=$CNT+1
+fi
+if [ -f "$SOURCE/$VER-raspios-buster-armhf.img" ];then
+ SOURCES[$CNT]="$VER-raspios-buster-armhf.img|$VER-$REV-ClusterCTRL-armhf|STD|RASPIOS32BUSTER"
+ let CNT=$CNT+1
+fi
+if [ -f "$SOURCE/$VER-raspios-buster-full-armhf.img" ];then
+ SOURCES[$CNT]="$VER-raspios-buster-full-armhf.img|$VER-$REV-ClusterCTRL-armhf-full|FULL|RASPIOS32BUSTER"
+ let CNT=$CNT+1
+fi
+
+# Check for Raspberry Pi OS
+if [ -f "$SOURCE/$VER-raspios-buster-armhf-lite.img" ];then
+ SOURCES[$CNT]="$VER-raspios-buster-armhf-lite.img|$VER-$REV-ClusterCTRL-armhf-lite|LITE|RASPIOS32BUSTER"
+ let CNT=$CNT+1
+fi
+if [ -f "$SOURCE/$VER-raspios-buster-armhf.img" ];then
+ SOURCES[$CNT]="$VER-raspios-buster-armhf.img|$VER-$REV-ClusterCTRL-armhf|STD|RASPIOS32BUSTER"
+ let CNT=$CNT+1
+fi
+if [ -f "$SOURCE/$VER-raspios-buster-armhf-full.img" ];then
+ SOURCES[$CNT]="$VER-raspios-buster-armhf-full.img|$VER-$REV-ClusterCTRL-armhf-full|FULL|RASPIOS32BUSTER"
+ let CNT=$CNT+1
+fi
+
+# Check for Raspberry Pi OS 64-bit
+if [ -f "$SOURCE/$VER-raspios-buster-arm64.img" ];then
+ SOURCES[$CNT]="$VER-raspios-buster-arm64.img|$VER-$REV-ClusterCTRL-arm64|STD|RASPIOS64BUSTER"
+ let CNT=$CNT+1
+fi
+if [ -f "$SOURCE/$VER-raspios-buster-arm64-lite.img" ];then
+ SOURCES[$CNT]="$VER-raspios-buster-arm64-lite.img|$VER-$REV-ClusterCTRL-arm64-lite|LITE|RASPIOS64BUSTER"
  let CNT=$CNT+1
 fi
 
@@ -69,7 +107,7 @@ fi
 # "apt install qemu-user kpartx qemu-user-static"
 QEMU=0
 MACHINE=`uname -m`
-if [ ! "$MACHINE" = "armv7l" ];then
+if ! [ "$MACHINE" = "armv7l" -o "$MACHINE" = "aarch64" ] ;then
  if [ -f "/usr/bin/qemu-arm-static" ];then
   QEMU=1
  else 
@@ -145,18 +183,19 @@ EOF
    sed -i "s/\(.*\)/#\1/" $MNT/etc/ld.so.preload
   fi
 
+  chroot $MNT apt -y purge wolfram-engine
+
   # Get any updates / install and remove pacakges
   chroot $MNT apt update -y
   if [ $UPGRADE = "1" ];then
    chroot $MNT /bin/bash -c 'APT_LISTCHANGES_FRONTEND=none apt -y dist-upgrade'
   fi
   
-  if [ $RELEASE = "BUSTER" ];then
+  if [ $RELEASE = "BUSTER" -o $RELEASE = "RASPIOS32BUSTER" -o $RELEASE = "RASPIOS64BUSTER" ];then
    INSTALLEXTRA+=" initramfs-tools-core"
   fi
 
   chroot $MNT apt -y install rpiboot bridge-utils wiringpi screen minicom python-smbus subversion git libusb-1.0-0-dev nfs-kernel-server python-usb python-libusb1 busybox $INSTALLEXTRA
-  chroot $MNT apt -y purge wolfram-engine
 
   # Setup ready for iptables for NAT for NAT/WiFi use
   # Preseed answers for iptables-persistent install
@@ -213,6 +252,7 @@ EOF
 
   cat << EOF >> $MNT/etc/dhcpcd.conf
 # ClusterCTRL
+reboot 15
 denyinterfaces ethpi* ethupi* ethupi*.10 brint eth0 usb0.10
 
 profile clusterctrl_fallback_usb0
@@ -245,7 +285,7 @@ EOF
 
   # Enable console on UART
   if [ "$SERIALAUTOLOGIN" = "1" ];then
-   if [ $RELEASE = "BUSTER" ];then
+   if [ $RELEASE = "BUSTER" -o $RELEASE = "RASPIOS32BUSTER" -o $RELEASE = "RASPIOS64BUSTER" ];then
     mkdir -p $MNT/etc/systemd/system/serial-getty@ttyS0.service.d/
     cat > $MNT/etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf << EOF
 [Service]
@@ -267,7 +307,11 @@ EOF
   # Setup directories for rpiboot
   mkdir -p $MNT/var/lib/clusterctrl/boot
   mkdir $MNT/var/lib/clusterctrl/nfs
-  ln -fs /boot/bootcode.bin $MNT/var/lib/clusterctrl/boot/
+  if [ -z $BOOTCODE ];then
+   ln -fs /boot/bootcode.bin $MNT/var/lib/clusterctrl/boot/
+  elif [ ! $BOOTCODE = "none" ];then
+   wget -O $MNT/var/lib/clusterctrl/boot/bootcode.bin $BOOTCODE
+  fi
 
   # Enable clusterctrl init
   chroot $MNT systemctl enable clusterctrl-init
@@ -342,7 +386,11 @@ EOF
   chroot $MNT2/root/ systemctl disable clusterctrl-rpiboot
   sed -i "s/^#dtoverlay=dwc2,dr_mode=peripheral$/dtoverlay=dwc2,dr_mode=peripheral/" $MNT2/root/boot/config.txt
   echo -e "dwc2\n8021q\nuio_pdrv_genirq\nuio\nusb_f_acm\nu_serial\nusb_f_ecm\nu_ether\nlibcomposite\nudc_core\nipv6\nusb_f_rndis\n" >> $MNT2/root/etc/initramfs-tools/modules
-  echo -e "\n[pi0]\ninitramfs initramfs.img\n[pi1]\ninitramfs initramfs.img\n[pi2]\ninitramfs initramfs7.img\n[pi3]\ninitramfs initramfs7.img\n[pi4]\ninitramfs initramfs7l.img\n[all]\n" >> $MNT2/root/boot/config.txt
+  if [ $RELEASE = "RASPIOS64BUSTER" ];then
+   echo -e "\n[all]\ninitramfs initramfs8.img\ndtparam=sd_poll_once=on\n" >> $MNT2/root/boot/config.txt
+  else 
+   echo -e "\n[pi0]\ninitramfs initramfs.img\n[pi1]\ninitramfs initramfs.img\n[pi2]\ninitramfs initramfs7.img\n[pi3]\ninitramfs initramfs7.img\n[pi4]\ninitramfs initramfs7l.img\n[all]\ndtparam=sd_poll_once=on\n" >> $MNT2/root/boot/config.txt
+  fi
   chroot $MNT2/root/ /bin/bash -c "raspi-config nonint do_serial 0"
   sed -i "s# init=.*##" $MNT2/root/boot/cmdline.txt
   sed -i "s#^MODULES=.*#MODULES=netboot#" $MNT2/root/etc/initramfs-tools/initramfs.conf
@@ -355,7 +403,7 @@ EOF
 
   # Enable console on gadget serial
   if [ "$SERIALAUTOLOGIN" = "1" ];then
-   if [ $RELEASE = "BUSTER" ];then
+   if [ $RELEASE = "BUSTER" -o $RELEASE = "RASPIOS32BUSTER" -o $RELEASE = "RASPIOS64BUSTER" ];then
     mkdir -p $MNT2/root/etc/systemd/system/serial-getty@ttyS0.service.d/
     cat > $MNT2/root/etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf << EOF
 [Service]
@@ -386,7 +434,7 @@ EOF
 
   # 4B (64bit)
   for V in `(cd $MNT2/root/lib/modules/;ls|grep v8|sort -V|tail -n1)`; do
-   chroot $MNT2/root /bin/bash -c "mkinitramfs -o /boot/initramfs7l.img $V"
+   chroot $MNT2/root /bin/bash -c "mkinitramfs -o /boot/initramfs8.img $V"
   done
 
   if [ $QEMU -eq 1 ];then
